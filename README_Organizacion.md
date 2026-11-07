@@ -6,37 +6,43 @@ El trabajo se distribuirá entre los integrantes según los distintos módulos y
 
 La distribución de tareas permitirá avanzar de manera organizada, reducir conflictos al trabajar sobre los mismos archivos y facilitar la revisión del código.
 
-## Distribución inicial de tareas
+Para que el aporte sea equitativo, cada integrante se encarga de **al menos una estructura de datos o algoritmo central** y de **varias opciones del menú** que dependen de ella. Así, todos implementan funcionalidades solicitadas en el enunciado y trabajan con contenidos nuevos del curso.
 
-### Estructuras de datos y salas (Pablo Seron)
+## Distribución de tareas
 
-- Implementación de las estructuras necesarias para representar las salas de la mazmorra.
-- Organización de la información de cada sala.
-- Administración de las conexiones entre salas.
-- Operaciones de búsqueda, inserción y eliminación de salas.
+### Pablo Seron: grafo, habitaciones secretas y quemar habitaciones
 
-### Algoritmos de recorrido (Eban Delgado)
+- Implementación del grafo no dirigido que representa el mapa (lista de adyacencia).
+- Operaciones del grafo: agregar y eliminar habitaciones (vértices) y pasillos (aristas), consulta de vecinas.
+- Lista de habitaciones secretas pendientes y lógica de "Buscar pasadizos secretos" (opción 8): revelar, insertar en el grafo y en el ABB/AVL, y crear pasillos hacia vecinas existentes.
+- Lógica de "Quemar una habitación" (opción 9): validación de reglas, eliminación en el grafo y en el ABB/AVL, y aviso de pasillos destruidos.
+- Opción "Mostrar habitaciones vecinas" (opción 2).
 
-- Implementación del recorrido en anchura (BFS).
-- Implementación del recorrido en profundidad (DFS).
-- Búsqueda de rutas entre salas.
-- Identificación de salas alcanzables y tratamiento de las salas secretas.
+### Eban Delgado: algoritmos de recorrido y desplazamiento del personaje
 
-### Archivos e integración del juego (Benjamin Hernandez)
+- Implementación del recorrido en anchura (BFS): ruta más corta y detección de destino no alcanzable.
+- Implementación del recorrido en profundidad (DFS): habitaciones alcanzables.
+- Cálculo de habitaciones a k pasillos.
+- Opciones de menú: moverse a una habitación vecina (3), buscar ruta (4), explorar alcanzables (5), mostrar habitaciones a k pasillos (7) y mostrar habitaciones visitadas (10).
+- Registro del personaje (habitación actual y visitadas) y encuentros con enemigos (combatir o escapar).
 
-- Lectura y validación de los datos de `mazmorra.txt`.
-- Integración de las estructuras de datos y los algoritmos.
-- Implementación de las opciones principales del juego.
-- Manejo de errores y coordinación entre los distintos módulos.
+### Benjamin Hernandez: habitaciones, ABB/AVL y carga del mapa
 
-La distribución podrá ajustarse durante el desarrollo según las necesidades del proyecto y los avances de cada integrante.
+- Definición de la estructura de habitación (ID, nombre, descripción, tipo, tesoro y enemigo).
+- Implementación del ABB/AVL ordenado por ID: inserción, búsqueda, eliminación (hoja, un hijo y dos hijos) y recorridos inorden, preorden y postorden.
+- Lectura y validación de `mazmorra.txt`: construcción del grafo en dos pasadas, detección de errores con número de línea y manejo de habitaciones secretas pendientes.
+- Opciones de menú: consultar habitación (1), mostrar todas las habitaciones con recorrido inorden (6) y salir (11).
+- Bucle principal del programa (`main`) y menú.
+
+La distribución podrá ajustarse durante el desarrollo según las necesidades del proyecto y los avances de cada integrante. Este reparto reemplaza a la distribución inicial, y quedó registrado con un commit propio en el repositorio.
 
 ## Tareas compartidas
 
 - Elaboración y actualización del `Makefile`.
 - Documentación del proyecto en el README.
 - Pruebas de los distintos módulos.
-- Preparación del informe y descripción de las estructuras implementadas.
+- Integración de las estructuras y los algoritmos: cada integrante revisa e integra al menos un módulo de otro compañero.
+- Preparación del informe y descripción de las estructuras implementadas (cada integrante redacta la parte de su módulo).
 - Registro de las contribuciones de cada integrante.
 - Declaración del uso de herramientas de inteligencia artificial, cuando corresponda.
 - Preparación y realización de la presentación del proyecto.
