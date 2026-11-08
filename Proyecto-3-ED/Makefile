@@ -1,9 +1,12 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -I./inc -std=c11
 
+# Detecta automáticamente todos los archivos .c dentro de la carpeta src/
 SRC = $(wildcard src/*.c)
-# Transforma la ruta src/archivo.c en obj/archivo.o
+
+# Transforma las rutas de src/archivo.c a obj/archivo.o
 OBJ = $(patsubst src/%.c, obj/%.o, $(SRC))
+
 EXEC = juego
 
 all: $(EXEC)
@@ -11,11 +14,11 @@ all: $(EXEC)
 $(EXEC): $(OBJ)
 	$(CC) $(CFLAGS) -o $@ $^
 
-# Compila los .c de src/ y genera los .o en obj/ (creando la carpeta si falta con | obj)
+# Regla para compilar los archivos fuente generando los .o dentro de obj/ (crea la carpeta si no existe)
 obj/%.o: src/%.c | obj
 	$(CC) $(CFLAGS) -c $< -o $@
 
-# Regla para crear la carpeta obj automáticamente
+# Regla automática para crear el directorio obj
 obj:
 	mkdir -p obj
 
