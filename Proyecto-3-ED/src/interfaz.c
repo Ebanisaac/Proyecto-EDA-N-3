@@ -1,36 +1,42 @@
+/**
+ * @file interfaz.c
+ * @author Carlos Cofré
+ * @brief Menú principal y flujo de exploración de la mazmorra (Proyecto 3)
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "interfaz.h"
 #include "personaje.h"
-#include "inventario.h"
-#include "uso_objeto.h"
-#include "guardado.h"
-#include "aventura.h"
-#include "historial.h"
+#include "habitacion.h"
+#include "arbol.h"
+#include "grafo.h"
+#include "lector.h"
+#include "recorrido.h"
 
 /**
- * @brief Limpia el buffer de entrada para evitar bucles infinitos con scanf.
+ * @brief Limpia los caracteres pendientes en el buffer de entrada estándar.
  */
-
-static void limpiar_buffer(void) {
+static void limpiar_buffer(void){
     int c;
-    while ((c = getchar()) != '\n' && c != EOF);
+    while ((c = getchar())!= '\n' && c != EOF);
 }
 
 /**
- * @brief Solicita un número entero al usuario de forma segura.
+ * @brief Solicita un número entero al usuario validando que la entrada sea numérica.
+ *
+ * @param mensaje Texto que se muestra al pedir el dato.
+ * @return Número entero ingresado por el usuario.
  */
-
-static int leer_entero(const char* mensaje) {
+static int leer_entero(const char *mensaje){
     int valor;
     int leidos;
     do {
         printf("%s", mensaje);
         leidos = scanf("%d", &valor);
         limpiar_buffer();
-        if (leidos != 1) {
+        if (leidos != 1){
             printf("Error: Entrada inválida. Por favor, ingresa un número.\n");
         }
     } while (leidos != 1);
@@ -38,211 +44,245 @@ static int leer_entero(const char* mensaje) {
 }
 
 /**
- * @brief Solicita una cadena de texto al usuario sin espacios (para guardados y nombres).
+ * @brief Muestra la habitación actual y todas sus habitaciones vecinas conectadas.
+ *
+ * @param grafo Puntero al grafo de la mazmorra.
+ * @param raiz_arbol Raíz del ABB para consultar los nombres de cada habitación.
+ * @param id_actual ID de la habitación actual del personaje.
  */
+static void mostrar_vecinas(const grafo_t *grafo, NodoArbol *raiz_arbol, int id_actual){
+    int cant = 0;
+    int *vecinos = grafo_copiar_vecinos(grafo, id_actual, &cant);
+    Habitacion *actual = buscar_nodo(raiz_arbol, id_actual);
 
-static void leer_cadena(const char* mensaje, char* buffer, int limite) {
-    printf("%s", mensaje);
-    scanf("%s", buffer);
-    limpiar_buffer();
-    buffer[limite - 1] = '\0';
-}
-
-/* ========================================================================== */
-/*                              LÓGICA DEL MENÚ                               */
-/* ========================================================================== */
-
-static Personaje* menu_creacion_personaje(Inventario* inventario) {
-    Personaje* p = NULL;
-    int opcion;
-    char nombre[50];
-    char ruta[256];
-    ResultadoGuardado res;
-
-    printf("=== BIENVENIDO AL RPG ===\n");
-    printf("1. Nuevo Personaje\n");
-    printf("2. Cargar Partida\n");
-    
-    do {
-        opcion = leer_entero("Elige una opción (1-2): ");
-        if (opcion == 1) {
-            leer_cadena("Ingresa el nombre de tu personaje (sin espacios): ", nombre, 50);
-            p = crear_personaje(nombre, 100, 15, 5); // Valores base iniciales
-            if (p != NULL) {
-                printf("¡Personaje %s creado con éxito!\n", p->nombre);
-            }
-        } else if (opcion == 2) {
-            leer_cadena("Ingresa el nombre del archivo a cargar (ej. partida.txt): ", ruta, 256);
-            p = crear_personaje("Temp", 1, 1, 1); // Personaje temporal para sobreescribir
-            res = cargar_partida(ruta, p, inventario); // Carga directa al inventario y personaje
-            
-            if (res == GUARDADO_OK) {
-                printf("Partida cargada correctamente.\n");
-            } else {
-                printf("Error al cargar la partida. Código: %d\n", res);
-                free(p);
-                p = NULL;
-            }
-        } else {
-            printf("Opción no válida.\n");
-        }
-    } while (p == NULL);
-
-    return p;
-}
-
-void iniciar_juego(void) {
-    Personaje* jugador = NULL;
-    Inventario inventario;
-    PilaHistorial* historial = NULL;
-    int salir = 0;
-    int opcion;
-
-    // Inicialización de sistemas core
-    inventario_inicializar(&inventario);
-    historial = historial_crear();
-
-    jugador = menu_creacion_personaje(&inventario);
-    if (jugador == NULL) {
-        printf("Error fatal al inicializar el jugador.\n");
+    printf("Habitación actual: %s (ID %d)\n", actual ? actual->nombre : "Desconocida", id_actual);
+    printf("Habitaciones vecinas:\n");
+    if (vecinos == NULL || cant == 0){
+        printf("  - No hay habitaciones vecinas conectadas.\n");
+        free(vecinos);
         return;
     }
 
-    // Bucle principal
-    while (!salir && jugador->puntos_vida > 0) {
-        printf("\n===================================\n");
-        mostrar_estado(jugador);
-        printf("===================================\n");
-        printf("1. Explorar Zona\n");
-        printf("2. Ver Inventario\n");
-        printf("3. Usar / Equipar Objeto\n");
-        printf("4. Buscar Objeto por Nombre\n");
-        printf("5. Descartar Objeto\n");
-        printf("6. Ver Historial de Acciones\n");
-        printf("7. Deshacer última acción\n");
-        printf("8. Guardar Partida\n");
-        printf("9. Salir del Juego\n");
-        printf("===================================\n");
-        
-        opcion = leer_entero("¿Qué deseas hacer?: ");
+    for (int i = 0; i < cant; i++){
+        Habitacion *v = buscar_nodo(raiz_arbol, vecinos[i]);
+        if (v != NULL){
+            printf("  - %s (ID %d)\n", v->nombre, v->id);
+        } else {
+            printf("  - Habitación ID %d\n", vecinos[i]);
+        }
+    }
+    free(vecinos);
+}
 
-        switch (opcion) {
-            case 1:
-                iniciar_zona(&inventario, jugador);
-                historial_registrar(historial, ACCION_EXPLORACION, "Exploró una zona", NULL);
+/**
+ * @brief Traslada al personaje a una habitación de destino, registra la visita y gestiona enemigos.
+ *
+ * @param raiz_arbol Raíz del ABB para obtener los datos de la habitación.
+ * @param jugador Puntero al personaje que explora la mazmorra.
+ * @param destino ID de la habitación a la que entra el personaje.
+ */
+static void entrar_habitacion(NodoArbol *raiz_arbol, Personaje *jugador, int destino){
+    Habitacion *hab = buscar_nodo(raiz_arbol, destino);
+    if (hab == NULL){
+        printf("Error: No se encontró la información de la habitación %d.\n", destino);
+        return;
+    }
+
+    personaje_registrar_visita(jugador, destino);
+    printf("Ahora estás en: %s (ID %d)\n", hab->nombre, hab->id);
+
+    if (hab->cant_enemigos > 0 && hab->enemigo != NULL && hab->enemigo[0] != NULL){
+        printf("¡Un %s te bloquea el paso!\n", hab->enemigo[0]->nombre);
+        int accion;
+        do {
+            accion = leer_entero("1. Combatir  2. Escapar\n> ");
+        } while (accion != 1 && accion != 2);
+
+        if (accion == 1){
+            printf("¡Enfrentas a %s y logras abrirte paso!\n", hab->enemigo[0]->nombre);
+        } else {
+            printf("Esquivas a %s sin combatir.\n", hab->enemigo[0]->nombre);
+        }
+    }
+}
+
+/**
+ * @brief Valida y ejecuta el movimiento hacia una habitación vecina conectada.
+ *
+ * @param grafo Puntero al grafo de la mazmorra.
+ * @param raiz_arbol Raíz del ABB de habitaciones.
+ * @param jugador Puntero al personaje actual.
+ */
+static void moverse_habitacion(const grafo_t *grafo, NodoArbol *raiz_arbol, Personaje *jugador){
+    int destino = leer_entero("Ingresa el ID de la habitación vecina: ");
+    if (!grafo_son_vecinos(grafo, jugador->habitacion_actual, destino)){
+        printf("No puedes moverte allí: la habitación %d no es vecina de tu posición actual.\n", destino);
+        return;
+    }
+    entrar_habitacion(raiz_arbol, jugador, destino);
+}
+
+/**
+ * @brief Quema una habitación vecina eliminándola tanto del grafo como del ABB.
+ *
+ * @param grafo Puntero al grafo de la mazmorra.
+ * @param raiz_arbol Doble puntero a la raíz del ABB.
+ * @param jugador Puntero al personaje actual.
+ */
+static void quemar_habitacion(grafo_t *grafo, NodoArbol **raiz_arbol, const Personaje *jugador){
+    int id_quemar = leer_entero("Ingresa el ID de la habitación vecina a quemar: ");
+
+    if (id_quemar == jugador->habitacion_actual){
+        printf("No puedes quemar la habitación en la que te encuentras.\n");
+        return;
+    }
+
+    if (!grafo_son_vecinos(grafo, jugador->habitacion_actual, id_quemar)){
+        printf("Solo puedes quemar habitaciones vecinas de tu posición actual.\n");
+        return;
+    }
+
+    Habitacion *hab = buscar_nodo(*raiz_arbol, id_quemar);
+    if (hab == NULL){
+        printf("La habitación indicada no existe.\n");
+        return;
+    }
+
+    if (strcmp(hab->tipo, "INICIO")== 0){
+        printf("No se puede quemar la habitación de tipo INICIO.\n");
+        return;
+    }
+
+    char nombre_quemada[MAX_NOMBRE];
+    strncpy(nombre_quemada, hab->nombre, MAX_NOMBRE - 1);
+    nombre_quemada[MAX_NOMBRE - 1] = '\0';
+
+    int cant_vec = 0;
+    int *vecinos = grafo_copiar_vecinos(grafo, id_quemar, &cant_vec);
+
+    grafo_eliminar_vertice(grafo, id_quemar);
+    *raiz_arbol = eliminar_nodo(*raiz_arbol, id_quemar);
+
+    printf("%s (ID %d)fue reducida a cenizas.\n", nombre_quemada, id_quemar);
+    if (vecinos != NULL && cant_vec > 0){
+        printf("Pasillos destruidos: ");
+        for (int i = 0; i < cant_vec; i++){
+            printf("%d <-> %d", id_quemar, vecinos[i]);
+            if (i < cant_vec - 1)printf(", ");
+        }
+        printf("\n");
+    }
+    free(vecinos);
+}
+
+void iniciar_juego(void){
+    grafo_t grafo;
+    if (grafo_inicializar(&grafo)!= GRAFO_OK){
+        printf("Error fatal al inicializar el grafo.\n");
+        return;
+    }
+
+    NodoArbol *raiz_arbol = NULL;
+    ListaSecretas *secretas = crear_lista_secretas();
+    int id_inicio = -1;
+
+    if (!cargar_mazmorra("mazmorra.txt", &raiz_arbol, &grafo, secretas, &id_inicio)){
+        liberar_lista_secretas(secretas);
+        liberar_arbol(raiz_arbol);
+        grafo_liberar(&grafo);
+        return;
+    }
+
+    Personaje *jugador = crear_personaje("Aventurero", 100, 15, 5);
+    if (jugador == NULL){
+        liberar_lista_secretas(secretas);
+        liberar_arbol(raiz_arbol);
+        grafo_liberar(&grafo);
+        return;
+    }
+    personaje_registrar_visita(jugador, id_inicio);
+
+    int salir = 0;
+    while (!salir){
+        Habitacion *actual = buscar_nodo(raiz_arbol, jugador->habitacion_actual);
+        printf("\n===== MENÚ PRINCIPAL =====\n");
+        printf("Habitación actual: %s (ID %d)\n",
+               actual ? actual->nombre : "Desconocida", jugador->habitacion_actual);
+        printf("1. Consultar habitación\n");
+        printf("2. Mostrar habitaciones vecinas\n");
+        printf("3. Moverse a una habitación vecina\n");
+        printf("4. Buscar ruta hacia otra habitación\n");
+        printf("5. Explorar habitaciones alcanzables\n");
+        printf("6. Mostrar todas las habitaciones\n");
+        printf("7. Mostrar habitaciones a k pasillos\n");
+        printf("8. Buscar pasadizos secretos\n");
+        printf("9. Quemar una habitación\n");
+        printf("10. Mostrar habitaciones visitadas\n");
+        printf("11. Salir\n");
+
+        int opcion = leer_entero("> ");
+        switch (opcion){
+            case 1: {
+                int id = leer_entero("Ingresa el ID de la habitación: ");
+                Habitacion *h = buscar_nodo(raiz_arbol, id);
+                if (h != NULL){
+                    mostrar_habitacion(h);
+                } else {
+                    printf("La habitación con ID %d no existe o aún no ha sido descubierta.\n", id);
+                }
                 break;
-
+            }
             case 2:
-                inventario_listar(&inventario);
+                mostrar_vecinas(&grafo, raiz_arbol, jugador->habitacion_actual);
                 break;
-
             case 3:
-                inventario_listar(&inventario);
-                if (inventario.cantidad > 0) {
-                    int id_obj = leer_entero("Ingresa el ID del objeto a usar (0 para cancelar): ");
-                    if (id_obj != 0) {
-                        Objeto* obj = inventario_buscar_por_id(&inventario, id_obj);
-                        if (obj != NULL) {
-                            Objeto copia_obj = *obj; // Copia para el historial antes de consumirse
-                            ResultadoUso res = usar_objeto(&inventario, id_obj, jugador, 0);
-                            if (res == USO_OK || res == USO_OK_ENEMIGO_DISTRAIDO) {
-                                historial_registrar(historial, ACCION_USAR_OBJETO, "Se usó/equipó un objeto", &copia_obj);
-                            } else {
-                                printf("No se pudo usar el objeto (Código de error: %d).\n", res);
-                            }
-                        } else {
-                            printf("Objeto no encontrado en el inventario.\n");
-                        }
+                moverse_habitacion(&grafo, raiz_arbol, jugador);
+                break;
+            case 4: {
+                int destino = leer_entero("Ingresa el ID de la habitación de destino: ");
+                if (recorrido_bfs_ruta_corta(&grafo, jugador->habitacion_actual, destino)){
+                    char resp;
+                    printf("¿Deseas recorrer esta ruta? (S/N): ");
+                    scanf(" %c", &resp);
+                    limpiar_buffer();
+                    if (resp == 'S' || resp == 's'){
+                        entrar_habitacion(raiz_arbol, jugador, destino);
                     }
                 }
                 break;
-
-            case 4:
-            {
-                char nom_buscar[50];
-                leer_cadena("Ingresa el nombre del objeto a buscar: ", nom_buscar, 50);
-                Objeto* obj = inventario_buscar_por_nombre(&inventario, nom_buscar);
-                if (obj != NULL) {
-                    printf("¡Objeto encontrado! ID: %d | Nombre: %s | Valor: %d\n", obj->id, obj->nombre, obj->valor);
-                } else {
-                    printf("El objeto '%s' no se encuentra en tu inventario.\n", nom_buscar);
-                }
-                break;
             }
-
             case 5:
-                inventario_listar(&inventario);
-                if (inventario.cantidad > 0) {
-                    int id_desc = leer_entero("Ingresa el ID del objeto a descartar (0 para cancelar): ");
-                    if (id_desc != 0) {
-                        Objeto copia;
-                        // Pasamos &copia como tercer parámetro para que la función guarde ahí el objeto eliminado
-                        if (inventario_eliminar_por_id(&inventario, id_desc, &copia) == INVENTARIO_OK) {
-                            printf("Descartaste: %s\n", copia.nombre);
-                            historial_registrar(historial, ACCION_DESCARTAR_OBJETO, "Se descartó un objeto", &copia);
-                        } else {
-                            printf("Objeto no encontrado.\n");
-                        }
-                    }
-                }
+                recorrido_dfs_alcanzables(&grafo, jugador->habitacion_actual);
                 break;
-
             case 6:
-                historial_mostrar(historial);
+                recorrer_inorden(raiz_arbol);
                 break;
-
-            case 7:
-            {
-                const Accion *ult = historial_cima(historial);
-                if (ult == NULL) {
-                    printf("No hay acciones que deshacer.\n");
-                } else if (ult->tipo != ACCION_DESCARTAR_OBJETO) {
-                    printf("La última acción no se puede deshacer.\n");
-                } else {
-                    Objeto o = ult->objeto_involucrado;
-                    if (inventario_agregar(&inventario, &o) == INVENTARIO_OK) {
-                        historial_desapilar(historial);
-                        printf("Se restauró %s.\n", o.nombre);
-                    } else {
-                        printf("No se pudo restaurar el objeto.\n");
-                    }
-                }
+            case 7: {
+                int k = leer_entero("Ingresa k: ");
+                recorrido_mostrar_k_pasillos(&grafo, jugador->habitacion_actual, k);
                 break;
             }
-
             case 8:
-            {
-                char ruta_guardado[256];
-                leer_cadena("Ingresa el nombre del archivo para guardar (ej. partida.txt): ", ruta_guardado, 256);
-                if (guardar_partida(ruta_guardado, jugador, &inventario) == GUARDADO_OK) {
-                    printf("¡Partida guardada con éxito!\n");
-                    historial_registrar(historial, ACCION_VACIA, "Guardó la partida", NULL);
-                } else {
-                    printf("Ocurrió un error al guardar la partida.\n");
-                }
+                revelar_pasadizos_secretos(secretas, jugador->habitacion_actual, &raiz_arbol, &grafo);
                 break;
-            }
             case 9:
-                printf("Saliendo del juego...\n");
+                quemar_habitacion(&grafo, &raiz_arbol, jugador);
+                break;
+            case 10:
+                personaje_mostrar_visitadas(jugador);
+                break;
+            case 11:
+                printf("Saliendo de la mazmorra...\n");
                 salir = 1;
                 break;
-
             default:
-                printf("Opción inválida. Intenta nuevamente.\n");
+                printf("Opción inválida.\n");
                 break;
         }
-
-        if (jugador->puntos_vida <= 0) {
-            printf("\n¡Has caído en combate! Fin de la partida.\n");
-        }
     }
 
-    // Limpieza de memoria general
-    printf("Limpiando memoria...\n");
-    inventario_liberar(&inventario);
-    historial_liberar(historial);
-    if (jugador != NULL) {
-        free(jugador);
-    }
-    printf("gracias por jugaaarrr\n");
+    liberar_lista_secretas(secretas);
+    liberar_arbol(raiz_arbol);
+    grafo_liberar(&grafo);
+    free(jugador);
 }
